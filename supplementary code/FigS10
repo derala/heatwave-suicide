@@ -1,0 +1,34 @@
+gen logmpop=log(mpop)
+gen logfmpop=log(fmpop)
+
+local vars mws fws mve fve mine fine mage fage un am mu fu epc mcw fcw rp hb ae uae rae mdm mdf dym dyf axm axf bim bif alcdlym alcdlyf psym psyf ses sem sef cy fpi al eu rec phr up rp pd pcf pcm PM ttm lbm lbf
+foreach var of local vars{
+gen tam_`var'=tam90_3_*`var'
+}
+
+
+******moderator*****
+gen logfmpop=log(fmpop)
+xtset id year
+xtpoisson fms c.tam##c.fws sdi i.year, offset(logfmp) fe vce(robust)
+**margins, at (fws=(0 20 40 60 80 100))
+margins, dydx(tam) at(fws=(0 20 40 60 80 100))
+marginsplot
+histogram fws
+
+***two figures
+histogram fws, bin(10) color(blue%30)  xlabel(0(20)100) ytitle("Frequency") name(hist_fws, replace)
+xtpoisson fms c.tam##c.fws sdi i.year, offset(logfmp) fe vce(robust)
+outreg2 using moderation.doc,append tstat bdec(3) tdec(2) ctitle(FE) keep(tam fws c.tam#c.fws fve c.tam#c.fve fine c.tam#c.fine fage c.tam#c.fage ) addtext(Country FE, YES, Year FE, YES, Pop.weights, Yes)
+margins, dydx(tam) at(fws=(0 20 40 60 80 100))
+marginsplot, ytitle("Marginal Effect") name(marg_fws, replace)
+graph combine hist_fws marg_fws, xcommon
+
+***one figure 
+color_style bay
+xtpoisson fms c.tam##c.fve sdi i.year, offset(logfmp) fe vce(robust)
+margins, dydx(tam) at(fve=(0 20 40 60 80 100))
+
+marginsplot, plotopts(msize(2) mcolor(red)) xlabel(0 20 40 60 80 100, valuelabel labsize(small) angle(0.01))xtitle("Rate of wage and salaried workers(%)", size(medsmall)) ///
+    addplot((histogram fve, percent width(10) fcolor(blue%30) lcolor(blue%30) xscale(range(0 100)) yaxis(2) yscale(alt axis(2))),below)
+
