@@ -1,0 +1,61 @@
+
+library(ggplot2)
+library(dplyr)
+
+# crearte dataset
+age_occupation <- data.frame(
+  variable = c(" 0_14", " 15_24", " 25_44", " 45_64", "65",
+                "high_fine", "low_fine", 
+               " high_fage", " low_fage",
+               " high_fws", "low_fws", 
+               " high_fve", " low_fve"),
+ coef = c(2.02487, 1.37509, 1.63778, 1.60282, 0.81143, 0.70133, 
+         -0.17627, 1.56243, 1.57339, 2.78318, 1.35067, 1.31138, 2.3973),
+lci = c(-1.61459, -1.54852, -0.747, -0.1, -0.39235, -0.35129, 
+        -2.70073, 0.83457, -3.21816, -1.79627, 0.53631, 0.48079, -2.11191),
+uci = c(5.66434, 4.2987, 4.02256, 3.30564, 2.01521, 1.75395, 
+        2.3482, 2.2903, 6.36494, 7.36262, 2.16502, 2.14198, 6.9065)
+)
+age_occupation <- age_occupation %>%
+  mutate(
+    pair = case_when(
+      grepl("fine", variable) ~ "industrial employment(%)",
+      grepl("fage", variable) ~ "agricultural employment(%)",
+      grepl("fws", variable) ~ "wage and salaried employment(%)",
+      grepl("fve", variable) ~ "vulnerable employment (%)",
+      TRUE ~ "age"
+    )
+  )
+
+age_occupation <- age_occupation %>%
+  mutate(
+    variable = factor(variable, levels = c(" 0_14", " 15_24", " 25_44", " 45_64", "65",
+                                           "high_fine", "low_fine", 
+                                           " high_fage", " low_fage",
+                                           " high_fws", "low_fws", 
+                                           " high_fve", " low_fve")),
+    pair = case_when(
+      grepl("fine", variable) ~ "industrial employment(%)",
+      grepl("fage", variable) ~ "agricultural employment(%)",
+      grepl("fws", variable) ~ "wage and salaried employment(%)",
+      grepl("fve", variable) ~ "vulnerable employment (%)",
+      TRUE ~ "age"
+    )
+  )
+
+# plot
+install.packages("ggsci")
+library(ggsci)
+
+ggplot(age_occupation, aes(y = variable, x = coef)) +
+     geom_point(aes(color = pair), size = 3) +
+     geom_errorbarh(aes(xmin = lci, xmax = uci), height = 0.2) +
+     facet_grid(pair ~ ., scales = "free_y", space = "free") +
+     geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+     theme_minimal() +
+     xlab("Coefficient Estimate") +
+     ylab("Variable Pair (High/Low)") +
+     theme(axis.text.y = element_text(size = 10)) +
+     theme(legend.position = "none") +
+      scale_color_npg()
+
