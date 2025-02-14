@@ -1,0 +1,56 @@
+clear all
+
+set maxvar 10000  
+set matsize 11000  
+set memory 2g  
+import excel "\data\middle.xlsx", sheet("middle") firstrow
+local ages  0_0 0_14  15_24  25_44 45_64  65 
+local indepvars tam tamin tamax tmin tmax tmean
+foreach var in `vars' {
+    gen log`var' = log(`var')
+}
+gen loggdp = log(gdp)
+
+foreach age in `ages' {
+    gen logfmpop`age' = log(fmpop`age')
+}
+
+xtset id year
+
+
+**create tempfile
+tempfile coefdata
+postfile handle str20 modelname float coef float se str20 color str20 varname str20 indepvariables using `coefdata', replace
+
+local i 1
+foreach age in `ages' {
+    foreach indepvar in `indepvars' {
+        xtpoisson fms`age' `indepvar' sdi i.year, offset(logfmpop`age') fe vce(robust)
+        estimates store model_`i'
+        matrix b = e(b)
+        matrix V = e(V)
+        local coef = b[1,1]
+        local se = sqrt(V[1,1])
+        local color = cond(`coef' > 0, "red", "blue")
+        post handle ("model_`i'") (`coef') (`se') ("`color'") ("fms`age'") ("`indepvar'")
+        local i = `i' + 1
+    }
+}
+postclose handle
+use `coefdata', clear
+
+encode varname, gen (varname_factor)
+encode indepvariables, gen(indep_factor)
+gen li = coef - 1.96 * se
+gen ui = coef + 1.96 * se
+
+* plot
+set scheme white_tableau
+twoway (scatter coef varname_factor if color == "red", mcolor(red) msize(tiny)msymbol(square)) ///
+       (scatter coef varname_factor if color == "blue", mcolor(blue) msize(tiny) msymbol(circle)) ///
+       (rcap li ui varname_factor if color == "red", lcolor(red) lwidth(medium)) ///
+       (rcap li ui varname_factor if color == "blue", lcolor(blue) lwidth(medium)), ///
+	    by(indep_factor) ///
+       xlabel(1 "fms" 2 "fms0_14" 3 "fms15_24" 4 "fms25_44" 5 "fms45_64" 6 "fms65" ,angle(45)) ///
+       ylabel(, angle(90) grid labsize(tiny)) ///
+       ytitle("Coefficient") legend(off) yline(0, lpattern(dash) lcolor(black)) legend(off) 
