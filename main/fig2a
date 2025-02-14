@@ -1,0 +1,248 @@
+install.packages(c('reader','sp','classInt', 'data.table', 'dplyr', 'lfe', 'multcomp', 'plotrix', 'RColorBrewer', 'readr', 'reshape2', 'sampling', 'sp', 'splines'), dependencies = T)
+install.packages("glmmTMB")
+install.packages("ggeffects")
+install.packages("ggplot2")
+install.packages("pglm")
+install.packages("readstata13")
+library(RColorBrewer)
+library(ggeffects)
+library(ggplot2)
+
+library(glmmTMB)
+
+library(lfe)
+library(dplyr)
+library(reader)
+library(readxl)
+library(splines)
+middle<-read_excel("data/middle.xlsx",sheet = "middle")
+
+# run bootstrap of base model for male in middle income (county-month + state-year FE). this takes a while. 
+
+##male
+middle$year<- middle$year
+xx <- 0:21
+mod1 <- glm(ms ~ tam + sdi + factor(year) + offset(logmpop)+ factor(id),data=middle,family = poisson(link = "log"))  # state_year FE
+pred1 <- ggpredict(mod1, terms = "tam [0:21]")
+yy <-data.frame(xx, main= pred1$predicted)
+
+mod2 <- glm (ms ~ tam + sdi + factor(year) + offset(logmpop),data=middle,family = poisson(link = "log"))  # no country
+pred2 <- ggpredict(mod2, terms = "tam [0:21]")
+yy <-data.frame(yy, nocountry= pred2$predicted)
+
+mod3 <- glm (ms ~ tam + sdi  + offset(logmpop)+factor(id),data=middle,family = poisson(link = "log"))  # no year
+pred3 <-ggpredict(mod3, terms = "tam [0:21]")
+yy <-data.frame(yy, noyear=pred3$predicted)
+
+mod4<- glm (ms ~ tam + sdi + factor(year) +factor(id),data=middle,family = poisson(link = "log"))  # no offset
+pred4 <- ggpredict(mod4, terms = "tam [0:21]")
+yy <-data.frame(yy, nooffset= pred4$predicted)
+
+mod5<- glm(ms ~ tam + sdi + pm25 + factor(year) + offset(logmpop)+factor(id)  ,data=middle,family = poisson(link = "log"))  # with pm25
+pred5 <- ggpredict(mod5, terms = "tam [0:21]")
+yy <-data.frame(yy, pm25= pred5$predicted)
+
+mod6<- glm (ms ~ tam + sdi + o3 + factor(year) + offset(logmpop)+factor(id),data=middle,family = poisson(link = "log"))  # with o3
+pred6 <- ggpredict(mod6, terms = "tam [0:21]")
+yy <-data.frame(yy, o3= pred6$predicted)
+
+mod7 <- glm (ms ~ tam + sdi + factor(year) + offset(logmpop)+factor(id),data=middle,family = negative.binomial(1))  #nb
+pred7 <- ggpredict(mod7, terms = "tam [0:21]")
+yy <-data.frame(yy, nbreg=pred7$predicted)
+
+tam_values <- seq(0,21,by=1)
+middle$id <- factor(middle$id)  #covert to factor
+middle$year <- factor(middle$year)
+mod8 <- glm(ms ~ poly(tam, 3, raw=TRUE) + sdi+ factor(year) + offset(logmpop)+ factor(id) , data=middle)  # stateyear FE, spline 3 knots
+new_data8 <- data.frame(
+  tam = tam_values,
+  sdi = mean(middle$sdi, na.rm=TRUE),
+  year = factor("2010", levels=levels(middle$year)),
+  logmpop = mean(middle$logmpop, na.rm=TRUE), 
+  id = factor("2", levels=levels(middle$id)))
+new_data8[["poly(tam, 3, raw = TRUE)"]] <- poly(new_data8$tam, 3, raw=TRUE)
+new_data8[["offset(logmpop)"]] <- new_data8$logmpop
+new_data8$predicted8 <- predict(mod8, newdata=new_data8, type="response")
+yy<-data.frame(yy, cubic=new_data8$predicted8)
+#ggplot(new_data8, aes(x=tam, y=predicted8)) +
+  #geom_line(color="blue", linewidth=1) +
+  #labs(
+    #title="Relationship between TAM and MS",
+    #x="TAM",
+    #y="Predicted MS"
+  #) +
+  #theme_minimal()
+
+mod9 <- glmmTMB(ms ~ ns(tam,knots=c(8.9,12.6, 19.25)) + sdi+ factor(year) + offset(logmpop)+ factor(id), data=middle)  # stateyear FE, spline 3 knots
+new_data9 <- data.frame(
+  tam = tam_values,
+  sdi = mean(middle$sdi, na.rm=TRUE),
+  year = factor("2010", levels=levels(middle$year)),
+  logmpop = mean(middle$logmpop, na.rm=TRUE), 
+  id = factor("2", levels=levels(middle$id)))
+new_data9[["ns(tam, knots = c(2.878, 5.477, 8.9))"]] <- ns(new_data9$tam, knots = c(8.9,12.6, 19.25))
+new_data9[["offset(logmpop)"]] <- new_data9$logmpop
+new_data9$predicted9 <- predict(mod9, newdata=new_data9, type="response")
+yy<-data.frame(yy, spline3=new_data9$predicted9)
+
+
+mod10 <- glmmTMB(ms ~ ns(tam,df=8) + sdi+ factor(year) + offset(logmpop)+ factor(id) , data=middle)  
+new_data10 <- data.frame(
+  tam = tam_values,
+  sdi = mean(middle$sdi, na.rm=TRUE),
+  year = factor("2010", levels=levels(middle$year)),
+  logmpop = mean(middle$logmpop, na.rm=TRUE), 
+  id = factor("2", levels=levels(middle$id)))
+new_data10[["ns(tam, df = 8)"]] <- ns(new_data10$tam, df = 8)
+new_data10[["offset(logmpop)"]] <- new_data10$logmpop
+new_data10$predicted10 <- predict(mod10, newdata=new_data10, type="response")
+yy<-data.frame(yy, spline7=new_data10$predicted10)
+
+###female
+middle$year<- middle$year
+xx=0:21
+middle$id <- as.numeric(as.character(middle$id))  
+middle$year <- as.numeric(as.character(middle$year)) 
+modf1 <- glm (fms ~ tam + sdi + factor(year) + offset(logfmpop)+ factor(id),data=middle,family = poisson(link = "log"))  # state_year FE
+predf1 <- ggpredict(modf1, terms = "tam [0:21]")
+yyf <-data.frame(xx, mainf= predf1$predicted)
+
+modf2 <- glm (fms ~ tam + sdi + factor(year) + offset(logfmpop),data=middle,family = poisson(link = "log"))  # no country
+predf2 <- ggpredict(modf2, terms = "tam [0:21]")
+yyf <-data.frame(yyf, nocountry= predf2$predicted)
+
+modf3 <- glm (fms ~ tam + sdi  + offset(logfmpop)+factor(id),data=middle,family = poisson(link = "log"))  # no year
+predf3 <-ggpredict(modf3, terms = "tam [0:21]")
+yyf <-data.frame(yyf, noyear=predf3$predicted)
+
+modf4<- glm (fms ~ tam + sdi + factor(year) +factor(id),data=middle,family = poisson(link = "log"))  # no offset
+predf4 <- ggpredict(modf4, terms = "tam [0:21]")
+yyf <-data.frame(yyf, nooffset= predf4$predicted)
+
+modf5<- glm(fms ~ tam + sdi + pm25 + factor(year) + offset(logfmpop)+factor(id)  ,data=middle,family = poisson(link = "log"))  
+predf5 <- ggpredict(modf5, terms = "tam [0:21]")
+yyf <-data.frame(yyf, pm25= predf5$predicted)
+
+modf6<- glm (fms ~ tam + sdi + o3 + factor(year) + offset(logfmpop)+factor(id),data=middle,family = poisson(link = "log"))  
+predf6 <- ggpredict(modf6, terms = "tam [0:21]")
+yyf <-data.frame(yyf, o3= predf6$predicted)
+
+modf7 <- glm (fms ~ tam + sdi + factor(year) + offset(logfmpop)+factor(id),data=middle,family = negative.binomial(1))
+predf7 <- ggpredict(modf7, terms = "tam [0:21]")
+yyf <-data.frame(yyf, nbreg=predf7$predicted)
+
+tam_values <- seq(0,21,by=1)
+middle$id <- factor(middle$id)  #covert to factor
+middle$year <- factor(middle$year)
+modf8 <- glm(fms ~ poly(tam, 3, raw=TRUE) + sdi+ factor(year) + offset(logfmpop)+ factor(id) , data=middle)  
+new_dataf8 <- data.frame(
+  tam = tam_values,
+  sdi = mean(middle$sdi, na.rm=TRUE),
+  year = factor("2010", levels=levels(middle$year)),
+  logfmpop = mean(middle$logfmpop, na.rm=TRUE), 
+  id = factor("2", levels=levels(middle$id)))
+new_dataf8[["poly(tam, 3, raw = TRUE)"]] <- poly(new_dataf8$tam, 3, raw=TRUE)
+new_dataf8[["offset(logfmpop)"]] <- new_dataf8$logfmpop
+new_dataf8$predf8 <- predict(modf8, newdata=new_dataf8, type="response")
+yyf<-data.frame(yyf, cubic=new_dataf8$predf8)
+
+
+modf9 <- glm(fms ~ ns(tam,knots=c(8.9,12.6, 19.25)) + sdi+ factor(year) + offset(logfmpop)+ factor(id), data=middle)  
+new_dataf9 <- data.frame(
+  tam = tam_values,
+  sdi = mean(middle$sdi, na.rm=TRUE),
+  year = factor("2010", levels=levels(middle$year)),
+  logfmpop = mean(middle$logfmpop, na.rm=TRUE), 
+  id = factor("2", levels=levels(middle$id)))
+new_dataf9[["ns(tam, knots = c(2.878, 5.477, 8.9))"]] <- ns(new_dataf9$tam, knots = c(8.9,12.6, 19.25))
+new_dataf9[["offset(logfmpop)"]] <- new_dataf9$logfmpop
+new_dataf9$predf9 <- predict(modf9, newdata=new_dataf9, type="response")
+yyf<-data.frame(yyf, spline3=new_dataf9$predf9)
+
+
+modf10 <- glm(fms ~ ns(tam,df=8) + sdi+ factor(year) + offset(logfmpop)+ factor(id) , data=middle)  
+new_dataf10 <- data.frame(
+  tam = tam_values,
+  sdi = mean(middle$sdi, na.rm=TRUE),
+  year = factor("2010", levels=levels(middle$year)),
+  logfmpop = mean(middle$logfmpop, na.rm=TRUE), 
+  id = factor("2", levels=levels(middle$id)))
+new_dataf10[["ns(tam, df = 8)"]] <- ns(new_dataf10$tam, df = 8)
+new_dataf10[["offset(logfmpop)"]] <- new_dataf10$logfmpop
+new_dataf10$predf10 <- predict(modf10, newdata=new_dataf10, type="response")
+yyf<-data.frame(yyf, spline7=new_dataf10$predf10)
+
+
+### Plot Figure ###
+
+pdf(file="C:/Users/dy/Desktop/heat wave/r语言/bootstrapMainModel_middlem.pdf",height=8,width=10)
+par(mfrow=c(1,2))
+
+yyr <- yy
+for (i in 2:nn) {
+  yyr[, i] <- (yy[, i] - yy[yy$xx == 8, i])
+}
+get_ci <- function(pred, x_value) {
+  est_low <- pred$conf.low - pred$conf.low[pred$x == x_value]
+  est_high <- pred$conf.high - pred$conf.high[pred$x == x_value]
+  return(cbind(est_low, est_high))
+}
+
+# Plot response curves and CI for all models
+plot(1, type = "n", las = 1, ylim = c(-50, 100), xlim = c(0, 22))
+models <- list(pred1, pred2, pred3, pred4, pred5, pred6, pred7)
+clz <-c("#00468bff" ,"#008280ff", "#6a6599ff" ,"#dc0000e5" ,"orange" ,"#00a1d5ff" ,"#F39B7FE5")
+for (i in 1:length(models)) {
+  ci <- get_ci(models[[i]], 8)
+  polygon(c(xx, rev(xx)), c(ci[, 1], rev(ci[, 2])), col = clz[i], border = NA, density = 20)
+}
+xx<- 0:21
+
+clz <-c("#00468bff","#008280ff", "#6a6599ff" ,"#dc0000e5" ,"orange" ,"#00a1d5ff" ,"#F39B7FE5")
+for (i in 2:8) {
+  lines(xx, yyr[, i], col = clz[i-1],  lwd = 2)
+}
+abline(h = 0, lty = 2, col = "black", lwd = 1)
+#plot hist below
+bb = 80 
+ht <- hist(middle$tam,breaks=bb,plot=F)
+bb <- length(ht$breaks)  #hist() doesn't follow your exact instructions sometimes...
+rect(ht$breaks[1:(bb-1)],-50,ht$breaks[2:bb],-50+ht$counts/max(ht$counts)*20,col="lightblue") 
+
+text(21,yyr[dim(yyr)[1],2:8],names(yyr)[2:8],pos=4,cex=0.5) 
+
+# female data
+xx=0:21
+nn <- dim(yyf)[2]
+yyr2 <- yyf
+for (i in 2:nn) {
+  yyr2[, i] <- (yyf[, i] - yyf[yyf$xx == 8, i])
+}
+get_cif <- function(predf, x_value) {
+  est_lowf <- predf$conf.low - predf$conf.low[predf$x == x_value]
+  est_highf <- predf$conf.high - predf$conf.high[predf$x == x_value]
+  return(cbind(est_lowf, est_highf))
+}
+
+# Plot response curves and CI for all models
+plot(1, type = "n", las = 1, ylim = c(-50, 100), xlim = c(0, 22))
+modelsf <- list(predf1, predf2, predf3, predf4, predf5, predf6, predf7)
+clz <-c("#00468bff" ,"#008280ff", "#6a6599ff" ,"#dc0000e5" ,"orange" ,"#00a1d5ff" ,"#F39B7FE5")
+for (i in 1:length(modelsf)) {
+  cif <- get_cif(modelsf[[i]], 8)
+  polygon(c(xx, rev(xx)), c(cif[, 1], rev(cif[, 2])), col = clz[i], border = NA, density = 20)
+}
+xx<- 0:21
+clz <-c("#00468bff" ,"#008280ff", "#6a6599ff" ,"#dc0000e5" ,"orange" ,"#00a1d5ff" ,"#F39B7FE5")
+for (i in 2:8) {
+  lines(xx, yyr2[, i], col = clz[i-1], lwd = 2)
+}
+abline(h = 0, lty = 2, col = "black", lwd = 1)
+
+#plot hist below
+bb = 80
+ht <- hist(middle$tam,breaks=bb,plot=F)
+bb <- length(ht$breaks)  #hist() doesn't follow your exact instructions sometimes...
+rect(ht$breaks[1:(bb-1)],-50 ,ht$breaks[2:bb],-50+ht$counts/max(ht$counts)*20,col="lightblue") 
+text(21,yyr2[dim(yyr2)[1],2:8],names(yyr2)[2:8],pos=4,cex=0.5) 
+dev.off()
