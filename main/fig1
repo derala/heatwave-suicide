@@ -1,0 +1,145 @@
+***fig.1a
+xtset id year
+//standardize HTA
+foreach inc in 1 2 3 {
+	egen tam_mean_`inc' = mean(tam) if income == `inc', by(year)
+    egen freq_mean_`inc' = mean(freq90_3) if income == `inc', by(year)
+	 egen hw_mean_`inc' = mean(hw90_3) if income == `inc', by(year)
+	}
+// Standardize male suicide
+foreach inc in 1 2 3 {
+    xtreg ms sdi if income == `inc', fe
+    predict residual_ms_`inc', e
+    egen mean_residual_ms_`inc' = mean(residual_ms_`inc'), by(year)
+    egen sd_residual_ms_`inc' = sd(residual_ms_`inc') if income == `inc'
+    gen residual_ms_`inc'_std = (residual_ms_`inc' - mean_residual_ms_`inc') / sd_residual_ms_`inc' if income == `inc'
+}
+// Standardize female suicide
+foreach inc in 1 2 3 {
+    xtreg fms sdi if income == `inc', fe
+    predict residual_fms_`inc', e
+    egen mean_residual_fms_`inc' = mean(residual_fms_`inc'), by(year)
+    egen sd_residual_fms_`inc' = sd(residual_fms_`inc') if income == `inc'
+    gen residual_fms_`inc'_std = (residual_fms_`inc' - mean_residual_fms_`inc') / sd_residual_fms_`inc' if income == `inc'
+}
+
+summarize mean_residual_fms_1 mean_residual_fms_2 mean_residual_fms_3 mean_residual_ms_1 mean_residual_ms_2 mean_residual_ms_3 if year==2000
+summarize mean_residual_fms_1 mean_residual_fms_2 mean_residual_fms_3 mean_residual_ms_1 mean_residual_ms_2 mean_residual_ms_3 if year==2019
+pwcorr_a mean_residual_ms_1 freq_mean_1
+pwcorr_a mean_residual_fms_1 freq_mean_1
+pwcorr_a mean_residual_ms_2 freq_mean_2
+pwcorr_a mean_residual_fms_2 freq_mean_2
+pwcorr_a mean_residual_ms_3 freq_mean_3
+pwcorr_a mean_residual_fms_3 freq_mean_3
+pwcorr_a mean_residual_ms_1 tam_mean_1
+pwcorr_a mean_residual_fms_1 tam_mean_1
+pwcorr_a mean_residual_ms_2 tam_mean_2
+pwcorr_a mean_residual_fms_2 tam_mean_2
+pwcorr_a mean_residual_ms_3 tam_mean_3
+pwcorr_a mean_residual_fms_3 tam_mean_3
+pwcorr_a mean_residual_ms_1 hw_mean_1
+pwcorr_a mean_residual_fms_1 hw_mean_1
+pwcorr_a mean_residual_ms_2 hw_mean_2
+pwcorr_a mean_residual_fms_2 hw_mean_2
+pwcorr_a mean_residual_ms_3 hw_mean_3
+pwcorr_a mean_residual_fms_3 hw_mean_3
+**fig1a
+twoway (line mean_residual_ms_1 year, lcolor(blue) lpattern(dash) lwidth(medthick) sort) ///
+       (line mean_residual_fms_1 year, lcolor(red) lpattern(dash) lwidth(medthick) sort) ///
+       (line mean_residual_ms_2 year, lcolor(blue) lpattern(solid) lwidth(medthick) sort) ///
+	   (line mean_residual_fms_2 year, lcolor(red) lpattern(solid) lwidth(medthick) sort) ///
+       (line mean_residual_ms_3 year, lcolor(blue) lpattern(dot) lwidth(medthick) sort) ///
+       (line mean_residual_fms_3 year, lcolor(red) lpattern(dot) lwidth(medthick) sort), ///
+    legend(off) ///
+    ytitle("Mean suicides") xtitle("Year") ///
+    title("Time Trends of Suicides by Income Levels after Controlling for SDI") ///
+	graphregion(color(white)) ///
+	name(suicides_trends, replace)
+
+***fig.1b***
+twoway (scatter mean_residual_ms_1 freq_mean_1 if income == 1, msize(small) mcolor(blue) msymbol(o)) ///
+       (lfit mean_residual_ms_1 freq_mean_1 if income == 1, lcolor(blue) lwidth(thick)) ///   
+       (scatter mean_residual_fms_1 freq_mean_1 if income == 1, msize(small) mcolor(red) msymbol(o)) ///   
+       (lfit mean_residual_fms_1 freq_mean_1 if income == 1, lcolor(red) lwidth(thick)), ///
+    title("Low income") ///
+    xlabel(, grid) ylabel(, grid) yscale(range(-400 400)) xtitle("Annual Mean of Heat Frequency") ///
+	name(graph_income1, replace) plotregion(color(white)) legend(off) graphregion(color(white))
+
+twoway (scatter mean_residual_ms_2 freq_mean_2 if income == 2, msize(small) mcolor(blue) msymbol(t)) ///
+       (lfit mean_residual_ms_2 freq_mean_2 if income == 2, lcolor(blue) lwidth(thick)) /// 
+       (scatter mean_residual_fms_2 freq_mean_2 if income == 2, msize(small) mcolor(red) msymbol(t)) ///   
+       (lfit mean_residual_fms_2 freq_mean_2 if income == 2, lcolor(red) lwidth(thick)), ///
+    title("Middle income") ///
+    xlabel(, grid) ylabel(, grid) yscale(range(-400 400)) xtitle("Annual Mean of Heat Frequency") ///
+    name(graph_income2, replace) plotregion(color(white)) legend(off) graphregion(color(white))
+
+twoway (scatter mean_residual_ms_3 freq_mean_3 if income == 3, msize(small) mcolor(blue) msymbol(s)) ///
+       (lfit mean_residual_ms_3 freq_mean_3 if income == 3, lcolor(blue) lwidth(thick)) /// 
+       (scatter mean_residual_fms_3 freq_mean_3 if income == 3, msize(small) mcolor(red) msymbol(s)) /// 
+       (lfit mean_residual_fms_3 freq_mean_3 if income == 3, lcolor(red) lwidth(thick)), ///
+    title("High income") ///
+    xlabel(, grid) ylabel(, grid) yscale(range(-400 400)) xtitle("Annual Mean of Heat Frequency")  ///
+    name(graph_income3, replace) plotregion(color(white)) legend(off) graphregion(color(white))
+	
+graph combine graph_income1 graph_income2 graph_income3, ///
+    cols(3) /// 
+    title("Correlation Between Suicides and heat frequency by Income Level") ///
+    colfirst  /// 
+	graphregion(color(white)) ///
+	ycommon ///
+	name(suicide_freq, replace)
+	
+***fig.1c***
+twoway (scatter mean_residual_ms_1 tam_mean_1 if income == 1, msize(small) mcolor(blue) msymbol(o)) ///
+       (lfit mean_residual_ms_1 tam_mean_1 if income == 1, lcolor(blue) lwidth(thick)) ///   
+       (scatter mean_residual_fms_1 tam_mean_1 if income == 1, msize(small) mcolor(red) msymbol(o)) ///   
+       (lfit mean_residual_fms_1 tam_mean_1 if income == 1, lcolor(red) lwidth(thick)), ///
+    title("Low income") ///
+    xlabel(, grid) ylabel(, grid) yscale(range(-400 400)) xtitle("Annual Mean of HTA") ///
+	name(graph_income1, replace) plotregion(color(white)) legend(off) graphregion(color(white))
+twoway (scatter mean_residual_ms_2 tam_mean_2 if income == 2, msize(small) mcolor(blue) msymbol(t)) ///
+       (lfit mean_residual_ms_2 tam_mean_2 if income == 2, lcolor(blue) lwidth(thick)) /// 
+       (scatter mean_residual_fms_2 tam_mean_2 if income == 2, msize(small) mcolor(red) msymbol(t)) ///   
+       (lfit mean_residual_fms_2 tam_mean_2 if income == 2, lcolor(red) lwidth(thick)), ///
+    title("Middle income") ///
+    xlabel(, grid) ylabel(, grid) yscale(range(-400 400)) xtitle("Annual Mean of HTA") ///
+    name(graph_income2, replace) plotregion(color(white)) legend(off) graphregion(color(white))
+twoway (scatter mean_residual_ms_3 tam_mean_3 if income == 3, msize(small) mcolor(blue) msymbol(s)) ///
+       (lfit mean_residual_ms_3 tam_mean_3 if income == 3, lcolor(blue) lwidth(thick)) /// 
+       (scatter mean_residual_fms_3 tam_mean_3 if income == 3, msize(small) mcolor(red) msymbol(s)) /// 
+       (lfit mean_residual_fms_3 tam_mean_3 if income == 3, lcolor(red) lwidth(thick)), ///
+    title("High income") ///
+    xlabel(, grid) ylabel(, grid) yscale(range(-400 400)) xtitle("Annual Mean of HTA")  ///
+    name(graph_income3, replace) plotregion(color(white)) legend(off) graphregion(color(white))	
+graph combine graph_income1 graph_income2 graph_income3, ///
+    cols(3) /// 
+    title("Correlation Between Suicides and HTA by Income Level") ///
+    colfirst  /// 
+	graphregion(color(white)) ///
+	ycommon ///
+	name(suicide_HTA, replace)
+***fig.1d***
+foreach inc in 1 2 3 {
+    gen tam_`inc' = .
+    replace tam_`inc' = tam if income == `inc'
+    xtile tam_quartile_`inc' = tam_`inc', n(4)
+    egen total_ms_`inc' = total(ms), by(income)
+    egen total_fms_`inc' = total(fms), by(income)
+    gen ms_pct_`inc' = (ms / total_ms_`inc')* 100  if income == `inc'
+    gen fms_pct_`inc' = (fms / total_fms_`inc') * 100 if income == `inc'
+    graph bar (sum) ms_pct_`inc' fms_pct_`inc', over(tam_quartile_`inc', label(labsize(medium))) ///
+        blabel(bar, size(medium)) ///
+		bar(1, color(blue)) bar(2, color(red)) ///
+        graphregion(color(white)) name(bar_tam_`inc', replace) legend(off)
+}
+graph combine bar_tam_1 bar_tam_2 bar_tam_3, ///
+    col(3) title("Percentage of Male/Female Suicides by Quartile by Income Level") ///
+    ycommon graphregion(color(white)) ///
+	name(suicides_by_perc, replace)
+
+
+***combine
+graph combine suicides_trends suicide_freq suicide_HTA suicides_by_perc, ///
+    col(2) title("Time Trends and Correlation Analysis") ///
+    ycommon graphregion(color(white)) 
+
