@@ -1,0 +1,124 @@
+***description_supplementary
+***Fig S1
+clear
+import excel "\data\all_income.xlsx", sheet("all99") firstrow
+color_style, list    
+color_style bay
+* a：`tam` 的violin 
+vioplot tam, over(income) horizontal ///
+    title("HTA Distribution (Violin Plot)") ///
+    ylabel(, angle(0)) xlabel(, labsize(small)) ///
+        saving(tam_density.gph, replace) ///
+		graphregion(color(white))
+///used in main paper
+by income, sort: summarize tam, detail 		
+collapse (mean) tam ms fms msh fmsh, by(income year)
+    egen z_ms1 = std(ms) if income == 1
+    egen z_fms1 = std(fms) if income == 1
+	egen z_ms2 = std(ms) if income == 2
+    egen z_fms2 = std(fms) if income == 2
+	egen z_ms3 = std(ms) if income == 3
+    egen z_fms3 = std(fms) if income == 3
+    egen z_tam1 = std(tam) if income == 1
+	egen z_tam2 = std(tam) if income == 2
+	egen z_tam3 = std(tam) if income == 3
+
+**b****
+	twoway(line z_tam1 year if income == 1,lwidth(thick)) ///
+       (line z_tam2 year if income == 2,lwidth(thick)) ///
+       (line z_tam3 year if income == 3,lwidth(thick)), ///
+       title("Time Trends of TAM") ///
+       ytitle("Standardized Values") xtitle("Year") ///
+       legend(order(1 "Low Income" 2 "Middle Income" 3 "High Income")) ///
+	   graphregion(color(white)) ///
+     saving(Tam_trend.gph, replace)
+* combine
+graph combine tam_density.gph tam_trend.gph , ///
+    title("HTA Analysis by Income Level") ///
+    cols(2) ///
+	graphregion(color(white))
+
+***Fig.S2****
+
+foreach inc in 1 2 3 {
+	egen tam_mean_`inc' = mean(tam) if income == `inc', by(year)
+    egen freq_mean_`inc' = mean(freq90_3) if income == `inc', by(year)
+	 egen hw_mean_`inc' = mean(hw90_3) if income == `inc', by(year)
+	}
+// standardize for male
+foreach inc in 1 2 3 {
+    xtreg ms sdi if income == `inc', fe
+    predict residual_ms_`inc', e
+    egen mean_residual_ms_`inc' = mean(residual_ms_`inc'), by(year)
+    egen sd_residual_ms_`inc' = sd(residual_ms_`inc') if income == `inc'
+    gen residual_ms_`inc'_std = (residual_ms_`inc' - mean_residual_ms_`inc') / sd_residual_ms_`inc' if income == `inc'
+}
+// standardize for female
+foreach inc in 1 2 3 {
+    xtreg fms sdi if income == `inc', fe
+    predict residual_fms_`inc', e
+    egen mean_residual_fms_`inc' = mean(residual_fms_`inc'), by(year)
+    egen sd_residual_fms_`inc' = sd(residual_fms_`inc') if income == `inc'
+    gen residual_fms_`inc'_std = (residual_fms_`inc' - mean_residual_fms_`inc') / sd_residual_fms_`inc' if income == `inc'
+}
+twoway (scatter mean_residual_ms_1 hw_mean_1 if income == 1, msize(small) mcolor(blue) msymbol(o)) ///
+       (lfit mean_residual_ms_1 hw_mean_1 if income == 1, lcolor(blue) lwidth(thick) lpattern(dash)) ///   
+       (scatter mean_residual_fms_1 hw_mean_1 if income == 1, msize(small) mcolor(red) msymbol(o)) ///   
+       (lfit mean_residual_fms_1 hw_mean_1 if income == 1, lcolor(red) lwidth(thick) lpattern(dash)), ///
+    title("Low income") ///
+    xlabel(, grid) ylabel(, grid) yscale(range(-400 400)) xtitle("Annual Mean of Heatdays") ///
+	name(graph_income1, replace) plotregion(color(white)) legend(off) graphregion(color(white))
+twoway (scatter mean_residual_ms_2 hw_mean_2 if income == 2, msize(small) mcolor(blue) msymbol(t)) ///
+       (lfit mean_residual_ms_2 hw_mean_2 if income == 2, lcolor(blue) lwidth(thick) lpattern(solid)) /// 
+       (scatter mean_residual_fms_2 hw_mean_2 if income == 2, msize(small) mcolor(red) msymbol(t)) ///   
+       (lfit mean_residual_fms_2 hw_mean_2 if income == 2, lcolor(red) lpattern(solid) lwidth(thick)), ///
+    title("Middle income") ///
+    xlabel(, grid) ylabel(, grid) yscale(range(-400 400)) xtitle("Annual Mean of Heatdays") ///
+    name(graph_income2, replace) plotregion(color(white)) legend(off) graphregion(color(white))
+
+twoway (scatter mean_residual_ms_3 hw_mean_3 if income == 3, msize(small) mcolor(blue) msymbol(s)) ///
+       (lfit mean_residual_ms_3 hw_mean_3 if income == 3, lcolor(blue) lwidth(thick) lpattern(dot)) /// 
+       (scatter mean_residual_fms_3 hw_mean_3 if income == 3, msize(small) mcolor(red) msymbol(s)) /// 
+       (lfit mean_residual_fms_3 hw_mean_3 if income == 3, lcolor(red) lpattern(dot) lwidth(thick)), ///
+    title("High income") ///
+    xlabel(, grid) ylabel(, grid) yscale(range(-400 400)) xtitle("Annual Mean of Heatdays")  ///
+    name(graph_income3, replace) plotregion(color(white)) legend(off) graphregion(color(white))
+graph combine graph_income1 graph_income2 graph_income3, ///
+    cols(3) /// 
+    title("Correlation Between Suicides and days by Income Level") ///
+    colfirst  /// 
+	graphregion(color(white)) ///
+	ycommon
+***figS3***
+**without sdi-control
+xtline fms fmsh 
+collapse (mean) fms fmsh, by(year)
+line fms fmsh , title("Yearly Trend of Male/Female suicides/Self-harm ") ytitle("Total number") xtitle("Year")	
+**sdi controlled trends
+foreach var in fms fmsh {
+    xtreg `var' sdi , fe
+    predict residual_`var', e
+    egen mean_residual_`var' = mean(residual_`var'), by(year)
+}
+twoway (line mean_residual_fms year, lcolor(blue) lwidth(medthick) sort) ///
+       (line mean_residual_fmsh year, lcolor(red) lwidth(medthick) sort)
+	  
+***figS4***
+import excel "\data\middle.xlsx", sheet("middle") firstrow
+color_style bay
+**histogram***
+histogram tam, bin(20) percent ///
+    title("Normalized Histogram of HTA") ///
+    xlabel(, grid) ylabel(, grid) ///
+	graphregion(color(white)) ///
+	name(histogram_tam, replace)	
+**density****
+		twoway kdensity tam if year==2000 || kdensity tam if year==2010 || kdensity tam if year==2019, ///
+       legend(order(1 "2000" 2 "2010" 3 "2019")) ///
+       title("HTA Density in Selected Years") ///
+	   graphregion(color(white)) ///
+	   name(desity_tam, replace)
+	   graph combine histogram_tam desity_tam, ///
+    col(2) /// 
+    title("Combined Graphs: TAM Analysis") ///
+    graphregion(color(white))
