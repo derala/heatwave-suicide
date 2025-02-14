@@ -1,0 +1,109 @@
+gen loggdp=log(gdp)
+gen logmpop=log(mpop)
+gen logfmpop=log(fmpop)
+xtset id year
+
+         ***duration****
+* male
+xtpoisson ms tam90_2_ sdi i.year, offset(logmpop) fe irr vce(robust)
+estimates store ms_tam90_2
+
+xtpoisson ms tam90_3_ sdi i.year, offset(logmpop) fe irr vce(robust)
+estimates store ms_tam90_3
+
+xtpoisson ms tam90_4_ sdi i.year, offset(logmpop) fe irr vce(robust)
+estimates store ms_tam90_4
+
+xtpoisson ms tam90_5_ sdi i.year, offset(logmpop) fe irr vce(robust)
+estimates store ms_tam90_5
+
+xtpoisson ms tam90_6_ sdi i.year, offset(logmpop) fe irr vce(robust)
+estimates store ms_tam90_6
+
+xtpoisson ms tam90_7_ sdi i.year, offset(logmpop) fe irr vce(robust)
+estimates store ms_tam90_7
+* female
+xtpoisson fms tam90_2_ sdi i.year, offset(logfmpop) fe irr vce(robust)
+estimates store fms_tam90_2
+
+xtpoisson fms tam90_3_ sdi i.year, offset(logfmpop) fe irr vce(robust)
+estimates store fms_tam90_3
+
+xtpoisson fms tam90_4_ sdi i.year, offset(logfmpop) fe irr vce(robust)
+estimates store fms_tam90_4
+
+xtpoisson fms tam90_5_ sdi i.year, offset(logfmpop) fe irr vce(robust)
+estimates store fms_tam90_5
+
+xtpoisson fms tam90_6_ sdi i.year, offset(logfmpop) fe irr vce(robust)
+estimates store fms_tam90_6
+
+xtpoisson fms tam90_7_ sdi i.year, offset(logfmpop) fe irr vce(robust)
+estimates store fms_tam90_7
+***plot
+color_style bay
+coefplot (ms_tam90_2, offset(0.05))ms_tam90_3 ms_tam90_4 ms_tam90_5 ms_tam90_6 ms_tam90_7 ///
+        (fms_tam90_2, offset(0.05)) fms_tam90_3 fms_tam90_4 fms_tam90_5 fms_tam90_6 fms_tam90_7, ///
+        yline(0,lp(dash) lc(black*0.3)) ///
+        xlabel(1 "2" 2 "3" 3 "4" 4 "5" 5 "6" 6 "7", valuelabel angle(0) labsize(medium)) ///
+        ytitle("Coefficient") ///
+        title("MS and FMS Coefficients for Different TAM Durations (P90)") ///
+        legend(label(1 "ms2" 2 "ms3"  "ms4" "ms5" "ms6" "ms7" "fms2" "fms3" "fms4" "fms5" "fms6" "fms7")) ///
+			   keep(tam90_2_ tam90_3_ tam90_4_ tam90_5_ tam90_6_ tam90_7_) ///
+			   vertical ///
+			   graphregion(color(white))
+
+
+			   
+			   
+			   ****intensity***
+* male
+xtpoisson ms tam75_3_ sdi i.year, offset(logmpop) fe irr vce(robust)
+estimates store ms_tam75_3
+
+xtpoisson ms tam80_3_ sdi i.year, offset(logmpop) fe irr vce(robust)
+estimates store ms_tam80_3
+
+xtpoisson ms tam85_3_ sdi i.year, offset(logmpop) fe irr vce(robust)
+estimates store ms_tam85_3
+
+xtpoisson ms tam90_3_ sdi i.year, offset(logmpop) fe irr vce(robust)
+estimates store ms_tam90_3
+
+xtpoisson ms tam95_3_ sdi i.year, offset(logmpop) fe irr vce(robust)
+estimates store ms_tam95_3
+
+xtpoisson ms tam99_3_ sdi i.year, offset(logmpop) fe irr vce(robust)
+estimates store ms_tam99_3
+* female
+xtpoisson fms tam75_3_ sdi i.year, offset(logfmpop) fe irr vce(robust)
+estimates store fms_tam75_3
+
+xtpoisson fms tam80_3_ sdi i.year, offset(logfmpop) fe irr vce(robust)
+estimates store fms_tam80_3
+
+xtpoisson fms tam85_3_ sdi i.year, offset(logfmpop) fe irr vce(robust)
+estimates store fms_tam85_3
+
+xtpoisson fms tam90_3_ sdi i.year, offset(logfmpop) fe irr vce(robust)
+estimates store fms_tam90_3
+
+xtpoisson fms tam95_3_ sdi i.year, offset(logfmpop) fe irr vce(robust)
+estimates store fms_tam95_3
+
+xtpoisson fms tam99_3_ sdi i.year, offset(logfmpop) fe irr vce(robust)
+estimates store fms_tam99_3
+
+***plot
+color_style bay
+coefplot (ms_tam75_3, offset(0.05))ms_tam80_3 ms_tam85_3 ms_tam90_3 ms_tam95_3 ms_tam99_3 ///
+        (fms_tam75_3, offset(0.05)) fms_tam80_3 fms_tam85_3 fms_tam90_3 fms_tam95_3 fms_tam99_3, ///
+        yline(0,lp(dash) lc(black*0.3)) ///
+        xlabel(1 "P75" 2 "P80" 3 "P85" 4 "P90" 5 "P95" 6 "P99", valuelabel angle(0) labsize(medium)) ///
+        ytitle("Coefficient") ///
+        title("Effect of different heat intensity(3d) on male/female suicide") ///
+        legend(label(1 "ms75" 2 "ms80"  "ms85" "ms90" "ms95" "ms99" "fms75" "fms80" "fms85" "fms90" "fms95" "fms99")) ///
+			   keep(tam75_3_ tam80_3_ tam85_3_ tam90_3_ tam95_3_ tam99_3_) ///
+			   vertical ///
+			   graphregion(color(white))
+			  
